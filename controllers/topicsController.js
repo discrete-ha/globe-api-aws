@@ -4,7 +4,7 @@ let topicsModel = require('../models/topicsModel');
 
 let TwitterController = function(req, res){
 	
-	let appid = process.env.appid;
+	let appid = process.env.sendbox_appid || require(process.cwd()+'/config.json').appid;
 	let cliendAppid = req.params.appid;
 	if (appid !== cliendAppid) {
 		var err = {
@@ -21,6 +21,13 @@ let TwitterController = function(req, res){
 			access_token_key: process.env.access_token_key,
 			access_token_secret: process.env.access_token_secret
 		};
+
+	if (!process.env.consumer_key || 
+		!process.env.consumer_secret || 
+		!process.env.access_token_key || 
+		!process.env.access_token_secret ) {
+		TwitterConfig = require(process.cwd()+'/config.json').twitter
+	}
 
 	let twitterClient = new Twitter(TwitterConfig);
 

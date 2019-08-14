@@ -1,8 +1,10 @@
 var memjs = require('memjs');
+let memcacheServer = require(process.cwd()+'/config.json').memcache_server;
 
-var client = memjs.Client.create(process.env.MEMCACHEDCLOUD_SERVERS, {
-  username: process.env.MEMCACHEDCLOUD_USERNAME,
-  password: process.env.MEMCACHEDCLOUD_PASSWORD
+var client = memjs.Client.create(memcacheServer, {
+  failover: true,
+  timeout: 1,
+  keepAlive: true
 });
 
 module.exports = function () {
