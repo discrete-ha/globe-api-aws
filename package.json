@@ -1,0 +1,26 @@
+{
+  "name": "globe-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.js",
+    "watch": "./node_modules/nodemon/bin/nodemon.js app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.508.0",
+    "body-parser": "^1.18.2",
+    "dotenv": "^8.0.0",
+    "express": "^4.16.2",
+    "memjs": "^1.2.2",
+    "mongodb": "^2.2.33",
+    "twitter": "^1.7.1"
+  },
+  "devDependencies": {
+    "install": "^0.13.0",
+    "nodemon": "^1.12.1",
+    "npm": "^6.10.2"
+  }
+}
