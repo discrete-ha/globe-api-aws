@@ -1,14 +1,18 @@
-let Memcached = require('elasticache-client');
+var memjs = require('memjs');
+let cacheServer = require(process.cwd()+'/config.json').cache_server_host;
+let cacheServerUser = require(process.cwd()+'/config.json').cache_server_user;
+let cacheServerPassword = require(process.cwd()+'/config.json').cache_server_password;
 
-
-let memcacheServer = require(process.cwd()+'/config.json').memcache_server;
-let memcachedClient = new Memcached(memcacheServer, {}, {});
+var client = memjs.Client.create(cacheServer, {
+  username: cacheServerUser,
+  password: cacheServerPassword
+});
 
 module.exports = function () {
   return {
 
     set: function (key, value) {
-		memcachedClient.set(key, value, {expires:120}, function(err, val) {
+		client.set(key, value, { expires: 60 }, function(err, val) {
 			if (err) {
 				console.log("err",err);
 			}
@@ -16,15 +20,11 @@ module.exports = function () {
     },
 
     get: function (key, callback) {
-      console.log("get1");
     	try{
-        console.log("get2");
-    		memcachedClient.get(key, function(err, val) {
-          console.log("get3");
-  				return callback(err, val);
-  			});
+    		client.get(key, function(err, val) {
+				return callback(err, val);
+			});
     	}catch(err){
-        console.log("err",err);
     		return callback(err, null);
     	}
     }

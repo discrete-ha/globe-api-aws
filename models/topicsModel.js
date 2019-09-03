@@ -1,13 +1,13 @@
 var db = require('./dbConnection')();
 
 module.exports = {
-  get: function (key, callback) {
-    db.get(key, function(err, val){
+  getTopics: function (woeid, callback) {
+    db.get(woeid, function(err, val){
       return callback(err, val);  
     })
   },
-  set: function (key, value) {
-    return db.set(key, value);
+  setTopics: function (woeid, value) {
+    return db.set(woeid, value);
   }
 }
 
