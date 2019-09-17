@@ -1,91 +1,7 @@
 require('dotenv').config();
-let commonWords = require('../common_words.json');
 let topicsModel = require('../models/topicsModel');
 let appid = require(process.cwd()+'/config.json').appid;
 let AVAILABLE_WOEID = require(process.cwd()+'/available.json');
-let Twitter = require('twitter');
-let TwitterConfig = require(process.cwd()+'/config.json').twitter;
-let twitterClient = new Twitter(TwitterConfig);
-
-let getAvailableWoeid = function(lat, long, callback){
-	let params = {
-		lat: lat,
-		long: long
-	};
-
-	let requestUrl = '/trends/closest.json';
-
-	twitterClient.get(requestUrl, params, function(error, location, response) {
-		let contents = [];
-		if (!error) {
-			try{
-				return callback(null, location[0]);
-			}catch(e){
-				return callback(e, null);
-			}
-		}else{
-			return callback(JSON.stringify(error), null);
-		}
-	});
-}
-
-let getKeywords = function(woeid, callback){
-	let noCache = false;
-	topicsModel.getTopics( woeid, function(err, val){
-		if ( val === null || err !== null || noCache ) {
-			getKeywordsFromApi( woeid, function(err, result){
-				if (err) {
-					console.log(err);
-					callback({ err: 'get Keywords error' }, null);
-				}else{
-					let ret = handleKeywords(result[0].trends, result[0].locations[0].name);
-					topicsModel.setTopics(woeid, JSON.stringify(ret));
-					callback(null, ret);
-				}
-			});
-		}else{
-			let ret = {...JSON.parse(val), cached: true};
-			callback(null, ret);
-		}
-	});
-}
-
-let getKeywordsFromApi = function(woeid, callback){
-	let params = {
-		id: woeid
-	};
-	
-	let requestUrl = '/trends/place.json';
-
-	twitterClient.get(requestUrl, params, function(error, tweets, response) {
-		let contents = [];
-		if (!error) {
-			try{
-				return callback(null, tweets);
-			}catch(e){
-				return callback(e, null);
-			}
-		}else{
-			return callback(JSON.stringify(error), null);
-		}
-	});
-}
-
-let handleKeywords = function(keywords, location){
-	let ret = [];
-	for (var i = 0; i < keywords.length; i++) {
-		var word = keywords[i].name.replace('#','');
-		var point = keywords[i].tweet_volume || 0;
-		if (commonWords.indexOf(word) === -1) {
-			ret.push({word:word, point:point});	
-		}
-	}
-
-	return {
-		topics:ret,
-		location:location
-	};
-}
 
 let mergeResults = function(apiResult, data, ratio){
 	let totalPoint = 0;
@@ -141,15 +57,14 @@ let getTopicsByLocation = function(req, res){
 		}
 	}
 
-
-	getAvailableWoeid(req.params.lat, req.params.long, function(err, location){
+	topicsModel.getAvailableWoeid(req.params.lat, req.params.long, function(err, location){
 		if (err) {
 			return res.send({err: err});	
 		}else{
 			var countryWoeid = (location.parentid).toString();
 			var cityWoeid = (location.woeid).toString();			
 			apiResult.woeid = cityWoeid;
-			getKeywords(countryWoeid, function(err, result){
+			topicsModel.getKeywords(countryWoeid, function(err, result){
 				if(err !== null){
 					return res.send(err);	
 				}
@@ -157,7 +72,7 @@ let getTopicsByLocation = function(req, res){
 				responseTopics(apiResult , topics, 0.5);
 			});
 
-			getKeywords(cityWoeid, function(err, result){
+			topicsModel.getKeywords(cityWoeid, function(err, result){
 				if(err !== null){
 					return res.send(err);
 				}
@@ -208,7 +123,7 @@ let getTopicsByWoeid = function(req, res){
 		}
 	}
 
-	getKeywords(countryWoeid, function(err, result){
+	topicsModel.getKeywords(countryWoeid, function(err, result){
 		if(err !== null){
 			return res.send(err);	
 		}
@@ -216,7 +131,7 @@ let getTopicsByWoeid = function(req, res){
 		responseTopics(apiResult , topics, 0.5);
 	});
 
-	getKeywords(cityWoeid, function(err, result){
+	topicsModel.getKeywords(cityWoeid, function(err, result){
 		if(err !== null){
 			return res.send(err);
 		}
