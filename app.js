@@ -13,6 +13,11 @@ app.get('/', function (req, res) {
 var topics = require('./routes/topics');
 app.use('/topics', topics);
 
+
+var settings = require('./routes/settings');
+app.use('/settings', settings);
+
+
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
   err.status = 404;

@@ -12,7 +12,7 @@ module.exports = function () {
   return {
 
     set: function (key, value) {
-		client.set(key, value, { expires: 60 }, function(err, val) {
+		client.set(key, value, { expires: 1800 }, function(err, val) {
 			if (err) {
 				console.log("err",err);
 			}

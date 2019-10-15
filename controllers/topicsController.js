@@ -36,6 +36,8 @@ let getTopicsByLocation = function(req, res){
 	let apiResult = {
 		topics:[],
 		location: null,
+		country: null,
+		countryCode: null,
 		woeid: null,
 		totalPoint: 0
 	};
@@ -64,11 +66,14 @@ let getTopicsByLocation = function(req, res){
 			var countryWoeid = (location.parentid).toString();
 			var cityWoeid = (location.woeid).toString();			
 			apiResult.woeid = cityWoeid;
+			apiResult.countryCode = location.countryCode;
+
 			topicsModel.getKeywords(countryWoeid, function(err, result){
 				if(err !== null){
 					return res.send(err);	
 				}
 				var topics = result.topics;
+				apiResult = {...apiResult, country: result.location};
 				responseTopics(apiResult , topics, 0.5);
 			});
 
@@ -85,12 +90,28 @@ let getTopicsByLocation = function(req, res){
 	});
 };
 
+let findParent = function(cityWoeid){
+	for (var i = 0; i < AVAILABLE_WOEID.length; i++) {
+		if ( parseInt(AVAILABLE_WOEID[i].woeid) === parseInt(cityWoeid) ) {
+			var res = {
+				woeid : AVAILABLE_WOEID[i].parentid ? AVAILABLE_WOEID[i].parentid.toString() : "1", 
+				countryCode :  AVAILABLE_WOEID[i].countryCode ? AVAILABLE_WOEID[i].countryCode.toString() : "earth"
+			};
+			return res
+			break;
+		}
+	}
+
+}
+
 let getTopicsByWoeid = function(req, res){
 	
 	let dataProcessCount = 2;
 	let apiResult = {
 		topics:[],
 		location: null,
+		country: null,
+		countryCode: null,
 		woeid: null,
 		totalPoint: 0
 	};
@@ -115,18 +136,16 @@ let getTopicsByWoeid = function(req, res){
 	var countryWoeid;
 	var cityWoeid = req.params.woeid;		
 	apiResult.woeid = cityWoeid;
-	
-	for (var i = 0; i < AVAILABLE_WOEID.length; i++) {
-		if ( parseInt(AVAILABLE_WOEID[i].woeid) === parseInt(cityWoeid) ) {
-			countryWoeid = AVAILABLE_WOEID[i].parentid.toString();
-			break;
-		}
-	}
+	var parentLocation = findParent(cityWoeid);
+	countryWoeid  = parentLocation.woeid;
+	apiResult.countryCode = parentLocation.countryCode;
 
 	topicsModel.getKeywords(countryWoeid, function(err, result){
 		if(err !== null){
 			return res.send(err);	
 		}
+		
+		apiResult = {...apiResult, country: result.location};
 		var topics = result.topics;
 		responseTopics(apiResult , topics, 0.5);
 	});
