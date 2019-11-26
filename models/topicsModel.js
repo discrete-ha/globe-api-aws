@@ -74,6 +74,7 @@ module.exports = {
 					}else{
 						let ret = self.handleKeywords(result[0].trends, result[0].locations[0].name);
 						self.setTopics(woeid, JSON.stringify(ret));
+						ret.cached = false;
 						callback(null, ret);
 					}
 				});

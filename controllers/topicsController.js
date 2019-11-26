@@ -73,6 +73,7 @@ let getTopicsByLocation = function(req, res){
 				if(err !== null){
 					return res.send(err);	
 				}
+
 				var topics = result.topics;
 				apiResult = {...apiResult, country: result.location};
 				responseTopics(apiResult , topics, 0.5);
@@ -130,7 +131,9 @@ let getTopicsByWoeid = function(req, res){
 		var result = mergeResults(apiResult, keywordsData, ratio);
 		dataProcessCount--;
 		if (dataProcessCount === 0) {
-			tweetModel.postTweet(result);
+			if(result.cached === false){
+				tweetModel.postTweet(result);
+			}
 			return res.send({...result, status: 200});
 		}
 	}
@@ -157,7 +160,7 @@ let getTopicsByWoeid = function(req, res){
 			return res.send(err);
 		}
 
-		apiResult = {...apiResult, location: result.location};
+		apiResult = {...apiResult, location: result.location, cached: result.cached};
 		var topics = result.topics;
 		responseTopics(apiResult , topics, 1);
 	});
