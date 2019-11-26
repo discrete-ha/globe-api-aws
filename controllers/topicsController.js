@@ -1,5 +1,6 @@
 require('dotenv').config();
 let topicsModel = require('../models/topicsModel');
+let tweetModel = require('../models/tweetModel');
 let appid = require(process.cwd()+'/config.json').appid;
 let AVAILABLE_WOEID = require(process.cwd()+'/available.json');
 
@@ -129,6 +130,7 @@ let getTopicsByWoeid = function(req, res){
 		var result = mergeResults(apiResult, keywordsData, ratio);
 		dataProcessCount--;
 		if (dataProcessCount === 0) {
+			tweetModel.postTweet(result);
 			return res.send({...result, status: 200});
 		}
 	}
