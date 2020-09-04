@@ -15,7 +15,7 @@
     "dotenv": "^8.0.0",
     "express": "^4.16.2",
     "memjs": "^1.2.2",
-    "mongodb": "^2.2.33",
+    "mongodb": "^3.1.13",
     "morgan": "^1.9.1",
     "redis": "^2.8.0",
     "twitter": "^1.7.1"
