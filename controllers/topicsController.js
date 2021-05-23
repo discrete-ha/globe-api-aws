@@ -1,10 +1,47 @@
 require('dotenv').config();
-let commonWords = require('../common_words.json');
 let topicsModel = require('../models/topicsModel');
+let tweetModel = require('../models/tweetModel');
+let appid = require(process.cwd()+'/config.json').appid;
+let AVAILABLE_WOEID = require(process.cwd()+'/available.json');
 
-let TwitterController = function(req, res){
-	
-	let appid = process.env.sendbox_appid || require(process.cwd()+'/config.json').appid;
+let mergeResults = function(apiResult, data, ratio){
+	let totalPoint = 0;
+	for (var j = 0; j < data.length; j++) {
+		
+		let newData = true;
+		let point = parseInt(data[j].point * ratio);
+		data[j].point = point;
+		for (var i = 0; i < apiResult.topics.length; i++) {
+			if (data[j].word === apiResult.topics[i].word) {
+				apiResult.topics[i].point += point;
+				newData = false;
+			}
+		}
+
+		if (newData) {
+			apiResult.topics.push(data[j]);
+		}
+
+		totalPoint += point;
+	}
+	apiResult.totalPoint += totalPoint;
+	apiResult.topics.sort(function(a, b){
+		return b.point-a.point
+	});
+	return apiResult;
+}
+
+let getTopicsByLocation = function(req, res){
+	let dataProcessCount = 2;
+	let apiResult = {
+		topics:[],
+		location: null,
+		country: null,
+		countryCode: null,
+		woeid: null,
+		totalPoint: 0
+	};
+
 	let cliendAppid = req.params.appid;
 	if (appid !== cliendAppid) {
 		var err = {
@@ -14,118 +51,125 @@ let TwitterController = function(req, res){
 		return res.send(err);
 	}
 
-	let Twitter = require('twitter');
-	let TwitterConfig = {
-			consumer_key: process.env.consumer_key,
-			consumer_secret: process.env.consumer_secret,
-			access_token_key: process.env.access_token_key,
-			access_token_secret: process.env.access_token_secret
-		};
-
-	if (!process.env.consumer_key || 
-		!process.env.consumer_secret || 
-		!process.env.access_token_key || 
-		!process.env.access_token_secret ) {
-		TwitterConfig = require(process.cwd()+'/config.json').twitter
-	}
-
-	let twitterClient = new Twitter(TwitterConfig);
-
-	let getAvailableWoeid = function(lat, long, callback){
-		let params = {
-			lat: lat,
-			long: long
-		};
-
-		let requestUrl = '/trends/closest.json';
-
-		twitterClient.get(requestUrl, params, function(error, location, response) {
-			let contents = [];
-			if (!error) {
-				try{
-					return callback(null, location[0]);
-				}catch(e){
-					return callback(e, null);
-				}
-			}else{
-				return callback(JSON.stringify(error), null);
-			}
-		});
-	}
-
-	let getKeywords = function(location, callback){
-		let params = {
-			id:location.woeid
-		};
-		
-		let requestUrl = '/trends/place.json';
-
-		twitterClient.get(requestUrl, params, function(error, tweets, response) {
-			let contents = [];
-			if (!error) {
-				try{
-					return callback(null, tweets);
-				}catch(e){
-					return callback(e, null);
-				}
-			}else{
-				return callback(JSON.stringify(error), null);
-			}
-		});
-	}
-
-	let handleKeywords = function(keywords, location){
-		let ret = [];
-		let totalPoint = 0;
-		for (var i = 0; i < keywords.length; i++) {
-			var word = keywords[i].name.replace('#','');
-			var point = keywords[i].tweet_volume || 0;
-			if (commonWords.indexOf(word) === -1) {
-				totalPoint += keywords[i].tweet_volume;
-				ret.push({word:word, point:point});	
-			}
+	let responseTopics =function( apiResult, keywordsData, ratio){
+		var result = mergeResults(apiResult, keywordsData, ratio);
+		dataProcessCount--;
+		if (dataProcessCount === 0) {
+			// if(result.cached === false){
+			// 	tweetModel.postTweet(result);
+			// }
+			return res.send({...result, status: 200});
 		}
-		
-		ret.sort(function(a, b){
-			return b.point-a.point
-		});
-
-		return {
-			status:200,
-			topics:ret,
-			location:location,
-			totalPoint:totalPoint
-		};
 	}
 
-	let initData = function(){
-		getAvailableWoeid(req.params.lat, req.params.long, function(err, location){
-			if (err) {
-				return res.send(err);	
-			}else{
-				var cacheKey = (location.woeid).toString();
-				topicsModel.get(cacheKey, function(err, val){
-					if (val === null || err !== null) {
-						getKeywords(location, function(err, result){
-							if (err) {
-								return res.send(err);	
-							}else{
-								let ret = handleKeywords(result[0].trends, result[0].locations[0].name);
-								topicsModel.set(cacheKey, JSON.stringify(ret));
-								ret = {...ret, cached: false}
-								return res.send(ret);
-							}
-						});
-					}else{
-						let ret = {...JSON.parse(val), cached: true};
-						return res.send(ret);
-					}
-				});
-			}
-		});
-	}
+	topicsModel.getAvailableWoeid(req.params.lat, req.params.long, function(err, location){
+		if (err) {
+			return res.send({err: err});	
+		}else{
+			var countryWoeid = (location.parentid).toString();
+			var cityWoeid = (location.woeid).toString();			
+			apiResult.woeid = cityWoeid;
+			apiResult.countryCode = location.countryCode;
 
-	initData();
+			topicsModel.getKeywords(countryWoeid, function(err, result){
+				if(err !== null){
+					return res.send(err);	
+				}
+
+				var topics = result.topics;
+				apiResult = {...apiResult, country: result.location};
+				responseTopics(apiResult , topics, 0.5);
+			});
+
+			topicsModel.getKeywords(cityWoeid, function(err, result){
+				if(err !== null){
+					return res.send(err);
+				}
+
+				apiResult = {...apiResult, location: result.location, cached: result.cached};
+				var topics = result.topics;
+				responseTopics(apiResult , topics, 1);
+			});
+		}
+	});
 };
 
-module.exports = TwitterController;
+let findParent = function(cityWoeid){
+	for (var i = 0; i < AVAILABLE_WOEID.length; i++) {
+		if ( parseInt(AVAILABLE_WOEID[i].woeid) === parseInt(cityWoeid) ) {
+			var res = {
+				woeid : AVAILABLE_WOEID[i].parentid ? AVAILABLE_WOEID[i].parentid.toString() : "1", 
+				countryCode :  AVAILABLE_WOEID[i].countryCode ? AVAILABLE_WOEID[i].countryCode.toString() : "earth"
+			};
+			return res
+			break;
+		}
+	}
+
+}
+
+let getTopicsByWoeid = function(req, res){
+	
+	let dataProcessCount = 2;
+	let apiResult = {
+		topics:[],
+		location: null,
+		country: null,
+		countryCode: null,
+		woeid: null,
+		totalPoint: 0
+	};
+
+	let cliendAppid = req.params.appid;
+	if (appid !== cliendAppid) {
+		var err = {
+			status: 401,
+			message: "An App ID with Identifier '" + cliendAppid + "' is not available'"
+		};
+		return res.send(err);
+	}
+
+	let responseTopics =function( apiResult, keywordsData, ratio){
+		var result = mergeResults(apiResult, keywordsData, ratio);
+		dataProcessCount--;
+		if (dataProcessCount === 0) {
+			// if(result.cached === false){
+			// 	tweetModel.postTweet(result);
+			// }
+			return res.send({...result, status: 200});
+		}
+	}
+	
+	var countryWoeid;
+	var cityWoeid = req.params.woeid;		
+	apiResult.woeid = cityWoeid;
+	var parentLocation = findParent(cityWoeid);
+	countryWoeid  = parentLocation.woeid;
+	apiResult.countryCode = parentLocation.countryCode;
+
+	topicsModel.getKeywords(countryWoeid, function(err, result){
+		if(err !== null){
+			return res.send(err);	
+		}
+		
+		apiResult = {...apiResult, country: result.location};
+		var topics = result.topics;
+		responseTopics(apiResult , topics, 0.5);
+	});
+
+	topicsModel.getKeywords(cityWoeid, function(err, result){
+		if(err !== null){
+			return res.send(err);
+		}
+
+		apiResult = {...apiResult, location: result.location, cached: result.cached};
+		var topics = result.topics;
+		responseTopics(apiResult , topics, 1);
+	});
+
+};
+
+module.exports = {
+	getTopicsByLocation: getTopicsByLocation,
+	getTopicsByWoeid: getTopicsByWoeid
+};

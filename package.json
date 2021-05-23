@@ -13,10 +13,11 @@
     "aws-sdk": "^2.508.0",
     "body-parser": "^1.18.2",
     "dotenv": "^8.0.0",
-    "elasticache-client": "0.0.7",
     "express": "^4.16.2",
     "memjs": "^1.2.2",
     "mongodb": "^2.2.33",
+    "morgan": "^1.9.1",
+    "redis": "^2.8.0",
     "twitter": "^1.7.1"
   },
   "devDependencies": {
