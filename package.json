@@ -12,6 +12,7 @@
   "dependencies": {
     "aws-sdk": "^2.508.0",
     "body-parser": "^1.18.2",
+    "cors": "^2.8.5",
     "dotenv": "^8.0.0",
     "express": "^4.16.2",
     "memjs": "^1.2.2",

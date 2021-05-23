@@ -32,7 +32,6 @@ let mergeResults = function(apiResult, data, ratio){
 }
 
 let getTopicsByLocation = function(req, res){
-	
 	let dataProcessCount = 2;
 	let apiResult = {
 		topics:[],
@@ -56,6 +55,9 @@ let getTopicsByLocation = function(req, res){
 		var result = mergeResults(apiResult, keywordsData, ratio);
 		dataProcessCount--;
 		if (dataProcessCount === 0) {
+			// if(result.cached === false){
+			// 	tweetModel.postTweet(result);
+			// }
 			return res.send({...result, status: 200});
 		}
 	}
@@ -84,7 +86,7 @@ let getTopicsByLocation = function(req, res){
 					return res.send(err);
 				}
 
-				apiResult = {...apiResult, location: result.location};
+				apiResult = {...apiResult, location: result.location, cached: result.cached};
 				var topics = result.topics;
 				responseTopics(apiResult , topics, 1);
 			});
@@ -131,9 +133,9 @@ let getTopicsByWoeid = function(req, res){
 		var result = mergeResults(apiResult, keywordsData, ratio);
 		dataProcessCount--;
 		if (dataProcessCount === 0) {
-			if(result.cached === false){
-				tweetModel.postTweet(result);
-			}
+			// if(result.cached === false){
+			// 	tweetModel.postTweet(result);
+			// }
 			return res.send({...result, status: 200});
 		}
 	}
