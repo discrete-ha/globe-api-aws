@@ -1,8 +1,6 @@
 const express = require('express');
 const app = express();
 const path    = require("path");
-var cors = require('cors');
-
 var morgan  = require('morgan')
 
 app.use(morgan('combined'))
@@ -25,7 +23,6 @@ app.use('/topics', topics);
 var settings = require('./routes/settings');
 app.use('/settings', settings);
 
-				
 app.use(function(req, res, next) {
   var err = new Error('Not Found');
   err.status = 404;
